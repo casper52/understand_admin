@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+ 
+<mapper namespace="mapper.UnderstandMapper">
+
+	<select id="qlist" resultType="QuestionVO">
+<![CDATA[  
+select *
+from
+(select
+/*+ INDEX_DESC (tbl_question pk_question) */
+ROWNUM rn, qno, question, regdate, (regdate + ( 1/ (24 * 60) * limittime))-sysdate time
+from TBL_question
+where qno > 0
+and ROWNUM <= (#{page} * #{size}))
+where rn > (#{page}-1) * #{size}
+]]>
+	</select>
+	
+	<select id="count" resultType="int">
+	select count(*) from tbl_question
+	</select>
+
+<insert id="write" parameterType="QuestionVO">
+insert into tbl_question (qno, question, limittime)
+values (seq_question.nextval, #{question}, #{limittime})
+</insert>
+
+<select id="result" resultType="ResponseVO">
+<![CDATA[
+select a.qno qno,a.question question, a.mno, mem.seatnum, mem.name, a.reply, cmt, a.replydate, a.ratio
+from
+(select res.qno qno,mno, reply,replydate,cmt,que.question question, (sum(reply)over())/(count(*)over())*100 ratio
+from(select question,qno
+from tbl_question
+)que, tbl_response res
+where res.qno=que.qno and res.qno = #{qno}) a, tbl_qmember mem
+where mem.mno=a.mno
+]]>
+</select>
+
+
+</mapper>
